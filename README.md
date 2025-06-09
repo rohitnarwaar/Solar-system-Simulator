@@ -14,7 +14,7 @@ It simulates the orbit of all 8 planets around the Sun and includes camera contr
 
 ## 🎮 How to Use
 
-1. Open `index.html` in a modern browser.
+1. Open `solar_system.html` in a modern browser.
 2. Use the dropdown to:
    - Change camera views.
    - Adjust speed of individual planets.
