@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Solar System</title>
+  <style>
+    .label {
+      position: absolute;
+      color: white;
+      font-size: 12px;
+      pointer-events: none;
+      transform: translate(-50%, -100%);
+    }
+  </style>
+</head>
+<body style="margin: 0; overflow: hidden; background-color: #000; color: white; font-family: sans-serif;">
+  <div id="uiControls" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px;">
+    <button id="toggleAnimation">Pause</button>
+    <button id="toggleTheme">Toggle Theme</button>
+    <label for="cameraView">Camera View:</label>
+    <select id="cameraView">
+      <option value="default">Default</option>
+      <option value="top">Top View</option>
+      <option value="side">Side View</option>
+      <option value="angled">Angled View</option>
+    </select>
+    <br><br>
+    <label for="planetSelector">Select Planet:</label>
+    <select id="planetSelector"></select>
+    <label for="planetSpeed">Speed:</label>
+    <input type="range" id="planetSpeed" min="0" max="0.1" step="0.001">
+  </div>
+
+  <script src="https://unpkg.com/three@0.148.0/build/three.min.js"></script>
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000);
+    document.body.appendChild(renderer.domElement);
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    const toggleAnimationBtn = document.getElementById("toggleAnimation");
+    const toggleThemeBtn = document.getElementById("toggleTheme");
+    const cameraViewSelect = document.getElementById("cameraView");
+    const planetSelector = document.getElementById("planetSelector");
+    const planetSpeedSlider = document.getElementById("planetSpeed");
+
+    let isAnimating = true;
+    let darkMode = true;
+
+    toggleAnimationBtn.onclick = () => {
+      isAnimating = !isAnimating;
+      toggleAnimationBtn.innerText = isAnimating ? 'Pause' : 'Resume';
+    };
+
+    toggleThemeBtn.onclick = () => {
+      darkMode = !darkMode;
+      document.body.style.backgroundColor = darkMode ? '#000' : '#fff';
+      document.body.style.color = darkMode ? '#fff' : '#000';
+      renderer.setClearColor(darkMode ? 0x000000 : 0xffffff);
+    };
+
+    cameraViewSelect.onchange = () => {
+      const view = cameraViewSelect.value;
+      if (view === "top") {
+        camera.position.set(0, 35, 0);
+        camera.lookAt(0, 0, 0);
+      } else if (view === "side") {
+        camera.position.set(35, 0, 0);
+        camera.lookAt(0, 0, 0);
+      } else if (view === "angled") {
+        camera.position.set(35, 25, 35);
+        camera.lookAt(0, 0, 0);
+      } else {
+        camera.position.set(0, 0, 30);
+        camera.lookAt(0, 0, 0);
+      }
+    };
+
+    cameraViewSelect.value = "default";
+    camera.position.set(0, 0, 30);
+    camera.lookAt(0, 0, 0);
+
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(2, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
+    scene.add(sun);
+
+    const planetsData = [
+      { name: 'Mercury', color: 0xaaaaaa, distance: 5, size: 0.2, speed: 0.04 },
+      { name: 'Venus', color: 0xffa500, distance: 7, size: 0.4, speed: 0.03 },
+      { name: 'Earth', color: 0x0000ff, distance: 9, size: 0.5, speed: 0.025 },
+      { name: 'Mars', color: 0xff0000, distance: 11, size: 0.4, speed: 0.02 },
+      { name: 'Jupiter', color: 0xf4e2d8, distance: 14, size: 1.1, speed: 0.01 },
+      { name: 'Saturn', color: 0xd2b48c, distance: 17, size: 0.9, speed: 0.009 },
+      { name: 'Uranus', color: 0x00ffff, distance: 20, size: 0.7, speed: 0.008 },
+      { name: 'Neptune', color: 0x00008b, distance: 23, size: 0.7, speed: 0.007 }
+    ];
+
+    const planets = [];
+    const labels = [];
+
+    planetsData.forEach((data, index) => {
+      const geometry = new THREE.SphereGeometry(data.size, 32, 32);
+      const material = new THREE.MeshStandardMaterial({ color: data.color });
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      const label = document.createElement('div');
+      label.className = 'label';
+      label.innerText = data.name;
+      document.body.appendChild(label);
+
+      const planet = { ...data, mesh, label, angle: Math.random() * Math.PI * 2 };
+      planets.push(planet);
+      labels.push(label);
+
+      const option = document.createElement('option');
+      option.value = index;
+      option.textContent = data.name;
+      planetSelector.appendChild(option);
+    });
+
+    planetSelector.addEventListener('change', () => {
+      planetSpeedSlider.value = planets[planetSelector.value].speed;
+    });
+
+    planetSpeedSlider.addEventListener('input', () => {
+      planets[planetSelector.value].speed = parseFloat(planetSpeedSlider.value);
+    });
+
+    planetSelector.value = 0;
+    planetSpeedSlider.value = planets[0].speed;
+
+    const light = new THREE.PointLight(0xffffff, 2, 100);
+    light.position.set(0, 0, 0);
+    scene.add(light);
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (isAnimating) {
+        planets.forEach(p => {
+          p.angle += p.speed;
+          p.mesh.position.set(
+            p.distance * Math.cos(p.angle),
+            0,
+            p.distance * Math.sin(p.angle)
+          );
+
+          const vector = p.mesh.position.clone().project(camera);
+          const sx = (vector.x * 0.5 + 0.5) * window.innerWidth;
+          const sy = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+          p.label.style.left = `${sx}px`;
+          p.label.style.top = `${sy}px`;
+        });
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
